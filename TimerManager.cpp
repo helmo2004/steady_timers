@@ -41,7 +41,6 @@ TimerManager::TimerManager(SteadyTickCallbackType steadyTickProvider)
 	};
 }
 
-
 std::shared_ptr<ISingleShotTimer> TimerManager::createSingleShotTimer()
 {
 	auto timer = std::make_shared<SingleShotTimer>(m_steadyTickCallback);
@@ -144,6 +143,3 @@ void TimerManager::poll()
 	}
 	m_isCurrentlyPolling = false;
 }
-
-
-
