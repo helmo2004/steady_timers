@@ -102,3 +102,33 @@ TEST_F(TimerTest, MultipleTimersExpireInRightOrderFastForwardTest)
 
 	uut->fastForward(1100ms);
 }
+
+TEST_F(TimerTest, PauseAndFastForwardTest)
+{
+	StrictMock<MockFunction<void(void)>> timerCallback1;
+
+	auto uut = createUUT();
+
+	auto timer1 = uut->createSingleShotTimer();
+	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+	timer1->start(1100ms);
+
+	uut->pause();
+
+	uut->fastForward(1000ms);
+	m_currentTime += 1000ms; // this should not raise timer event since we are in paused mode
+	uut->poll();
+	EXPECT_CALL(timerCallback1, Call());
+	uut->fastForward(100ms);
+
+	EXPECT_CALL(timerCallback1, Call()).Times(0);
+	uut->resume();
+	timer1->start(500ms);
+	m_currentTime += 499ms;
+	uut->poll();
+	m_currentTime += 1ms;
+	EXPECT_CALL(timerCallback1, Call());
+	uut->poll();
+
+}

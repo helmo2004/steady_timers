@@ -19,11 +19,23 @@ TimerManager::TimerManager(SteadyTickCallbackType steadyTickProvider)
 		std::chrono::milliseconds result;
 		if (m_isCurrentlyPolling)
 		{
+			// in polling we want to restart timers and this is assume to be happen at expiring time-stamp
+			// this ensures time correct behavior (maybe too late compared to provided clock, but we do not forget any expired timer)
 			result = m_pollTimeStamp;
 		}
 		else
 		{
-			result = steadyTickProvider() + m_fastForwardOffset;
+			// In paused mode we do not provide a steady clock
+			if (m_paused)
+			{
+				result = m_pausingTime;
+			}
+			else
+			{
+				result = steadyTickProvider();
+			}
+			// we need to consider offsets
+			result += m_fastForwardOffset + m_pausingOffset;
 		}
 		return result;
 	};
@@ -33,18 +45,58 @@ TimerManager::TimerManager(SteadyTickCallbackType steadyTickProvider)
 std::shared_ptr<ISingleShotTimer> TimerManager::createSingleShotTimer()
 {
 	auto timer = std::make_shared<SingleShotTimer>(m_steadyTickCallback);
+	// timers need to be stored here for determining if they are expired
+	// this allows us to let them expire in the correct order
 	m_timers.push_back(timer);
 	return timer;
 }
 
 void TimerManager::fastForward(std::chrono::milliseconds milliseconds)
 {
+	// this is not allowed when polling is active
+	if (m_isCurrentlyPolling)
+	{
+		return;
+	}
 	m_fastForwardOffset += milliseconds;
 	poll();
 }
 
+void TimerManager::pause()
+{
+	// this is not allowed when polling is active
+	if (m_isCurrentlyPolling)
+	{
+		return;
+	}
+	if (not m_paused)
+	{
+		m_pausingTime = m_steadyTickCallback();
+		m_paused = true;
+	}
+}
+
+void TimerManager::resume()
+{
+	// this is not allowed when polling is active
+	if (m_isCurrentlyPolling)
+	{
+		return;
+	}
+	if (m_paused)
+	{
+		m_paused = false;
+		m_pausingOffset = m_pausingTime - m_steadyTickCallback();
+	}
+}
+
 void TimerManager::poll()
 {
+	// only one poll at the same time allowed
+	if (m_isCurrentlyPolling)
+	{
+		return;
+	}
 	const auto currentTime = m_steadyTickCallback();
 	// this flag allows time duration correct timer behavior when timers are created during poll in callback
 	// we modify the current time to the time of currently expired timer
