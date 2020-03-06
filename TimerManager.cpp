@@ -1,8 +1,8 @@
 #include <chrono>
 #include <iostream>
 
-#include "SingleShotTimer.hpp"
 #include "TimerManager.hpp"
+#include "Timer.hpp"
 
 std::chrono::milliseconds getChronoSteadyClockTicks(void)
 {
@@ -41,9 +41,18 @@ TimerManager::TimerManager(SteadyTickCallbackType steadyTickProvider)
 	};
 }
 
-std::shared_ptr<ISingleShotTimer> TimerManager::createSingleShotTimer()
+std::shared_ptr<ITimer> TimerManager::createSingleShotTimer()
 {
-	auto timer = std::make_shared<SingleShotTimer>(m_steadyTickCallback);
+	auto timer = std::make_shared<Timer>(m_steadyTickCallback, true);
+	// timers need to be stored here for determining if they are expired
+	// this allows us to let them expire in the correct order
+	m_timers.push_back(timer);
+	return timer;
+}
+
+std::shared_ptr<ITimer> TimerManager::createTickTimer()
+{
+	auto timer = std::make_shared<Timer>(m_steadyTickCallback, false);
 	// timers need to be stored here for determining if they are expired
 	// this allows us to let them expire in the correct order
 	m_timers.push_back(timer);
@@ -103,7 +112,7 @@ void TimerManager::poll()
 
 	auto getNextExpiredTimer = [&]()
 	{
-		std::shared_ptr<SingleShotTimer> result;
+		std::shared_ptr<Timer> result;
 		auto timerIterator = m_timers.begin();
 		while (timerIterator != m_timers.end())
 		{
@@ -139,6 +148,10 @@ void TimerManager::poll()
 		if (timer->m_timeoutCallback)
 		{
 			timer->m_timeoutCallback();
+		}
+		if (not timer->m_isSingleShot)
+		{
+			timer->start(timer->m_duration);
 		}
 	}
 	m_isCurrentlyPolling = false;

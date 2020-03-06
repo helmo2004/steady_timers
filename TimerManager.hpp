@@ -5,7 +5,7 @@
 #include <list>
 #include "ITimerManager.hpp"
 
-class SingleShotTimer;
+class Timer;
 
 extern std::chrono::milliseconds getChronoSteadyClockTicks(void);
 
@@ -16,7 +16,9 @@ public:
 
 	TimerManager(SteadyTickCallbackType steadyTickProvider = getChronoSteadyClockTicks);
 
-	std::shared_ptr<ISingleShotTimer> createSingleShotTimer() override;
+	std::shared_ptr<ITimer> createSingleShotTimer() override;
+
+	std::shared_ptr<ITimer> createTickTimer() override;
 
 	void fastForward(std::chrono::milliseconds milliseconds) override;
 
@@ -28,7 +30,7 @@ public:
 
 private:
 	SteadyTickCallbackType m_steadyTickCallback;
-	std::list<std::weak_ptr<SingleShotTimer>> m_timers;
+	std::list<std::weak_ptr<Timer>> m_timers;
 	std::chrono::milliseconds m_pollTimeStamp = 0ms;
 	std::chrono::milliseconds m_fastForwardOffset = 0ms;
 	std::chrono::milliseconds m_pausingTime = 0ms;
