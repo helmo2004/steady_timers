@@ -25,7 +25,7 @@ private:
 	std::function<std::chrono::milliseconds(void)> m_getTimeCallback = nullptr;
 	bool m_running = false;
 	bool m_expired = false;
-	const bool m_isSingleShot;
+	const bool m_isSingleShot = false;
 	std::chrono::milliseconds m_expireTime = 0ms;
 	std::chrono::milliseconds m_duration = 0ms;
 };

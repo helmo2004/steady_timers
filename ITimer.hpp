@@ -4,7 +4,7 @@
 
 #include "ChronoHelpers.hpp"
 
-// allows easy to use durations h, min, s, ms, us, ns
+// allows easy to use duration literals: h, min, s, ms, (us, ns)
 // timer.start(2min)
 using namespace std::chrono_literals;
 
@@ -15,6 +15,7 @@ public:
 
 	virtual void stop() = 0;
 
+	/** Set timeout callback. Gets called when timeout happens */
 	virtual void setTimeoutCallback(std::function<void()> callback) = 0;
 
 	virtual void start(std::chrono::milliseconds duration) = 0;
