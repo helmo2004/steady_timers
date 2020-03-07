@@ -203,19 +203,24 @@ TEST_F(TimerTest, DontStartToShortDurationsForCycleTimerTest)
 	auto timer1 = uut->createTickTimer();
 	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
 
+
 	timer1->start(0ms);
 	EXPECT_FALSE(timer1->isRunning());
+	m_currentTime += 1ms;
 	uut->poll();
 
 	timer1->start(0s);
 	EXPECT_FALSE(timer1->isRunning());
+	m_currentTime += 1ms;
 	uut->poll();
 
 	timer1->start(0min);
 	EXPECT_FALSE(timer1->isRunning());
+	m_currentTime += 1ms;
 	uut->poll();
 
 	timer1->start(0h);
 	EXPECT_FALSE(timer1->isRunning());
+	m_currentTime += 1ms;
 	uut->poll();
 }
