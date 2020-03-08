@@ -365,3 +365,11 @@ TEST_F(TimerTest, PollDuringDuringPollDoesNotDirsturbBehaviorTest)
 	m_currentTime += 2000ms;
 	uut->poll();
 }
+
+TEST_F(TimerTest, OstreamTest)
+{
+	auto uut = createUUT();
+	auto timer1 = uut->createTickTimer();
+	timer1->start(500ms);
+	EXPECT_EQ("500ms", testing::PrintToString(timer1->getRemainingMilliseconds()));
+}
