@@ -1,5 +1,6 @@
 #include <gmock/gmock.h>
 #include <chrono>
+#include <thread>
 
 #include "TimerManager.hpp"
 
@@ -222,5 +223,145 @@ TEST_F(TimerTest, DontStartToShortDurationsForCycleTimerTest)
 	timer1->start(0h);
 	EXPECT_FALSE(timer1->isRunning());
 	m_currentTime += 1ms;
+	uut->poll();
+}
+
+TEST_F(TimerTest, ChronoSteadyClockTestTest)
+{
+	StrictMock<MockFunction<void(void)>> timerCallback1;
+
+	auto uut = std::make_shared<TimerManager>();
+
+	auto timer1 = uut->createTickTimer();
+	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+	timer1->start(250ms);
+	std::this_thread::sleep_for(250ms);
+	EXPECT_CALL(timerCallback1, Call()).Times(1);
+	uut->poll();
+}
+
+TEST_F(TimerTest, RemoveExpiredWeakPtrTest)
+{
+	StrictMock<MockFunction<void(void)>> timerCallback1;
+
+	auto uut = createUUT();
+
+	auto timer1 = uut->createSingleShotTimer();
+	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+	timer1->start(500ms);
+	EXPECT_CALL(timerCallback1, Call()).Times(1);
+	uut->fastForward(500ms);
+
+	timer1->start(500ms);
+	EXPECT_CALL(timerCallback1, Call()).Times(0);
+	timer1 = nullptr;
+	uut->fastForward(500ms);
+}
+
+TEST_F(TimerTest, RemoveExpiredWeakPtrDirectlyAfterCallbackTest)
+{
+	StrictMock<MockFunction<void(void)>> timerCallback1;
+
+	auto uut = createUUT();
+
+	auto timer1 = uut->createTickTimer();
+	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+	timer1->start(500ms);
+	EXPECT_CALL(timerCallback1, Call()).WillOnce(
+		Invoke([&]()
+		{
+			timer1 = nullptr;
+		}));
+	m_currentTime += 1000ms;
+	uut->poll();
+}
+
+TEST_F(TimerTest, NoPauseDuringPollTest)
+{
+	StrictMock<MockFunction<void(void)>> timerCallback1;
+
+	auto uut = createUUT();
+
+	auto timer1 = uut->createTickTimer();
+	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+	timer1->start(500ms);
+	EXPECT_CALL(timerCallback1, Call()).WillOnce(
+		Invoke([&]()
+		{
+			uut->pause();
+		}));
+	m_currentTime += 500ms;
+	uut->poll();
+
+	EXPECT_CALL(timerCallback1, Call()).Times(1);
+	m_currentTime += 500ms;
+	uut->poll();
+	uut->poll();
+}
+
+TEST_F(TimerTest, NoResumeDuringPollTest)
+{
+	StrictMock<MockFunction<void(void)>> timerCallback1;
+
+	auto uut = createUUT();
+
+	auto timer1 = uut->createTickTimer();
+	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+	uut->pause();
+	timer1->start(500ms);
+	EXPECT_CALL(timerCallback1, Call()).WillOnce(
+		Invoke([&]()
+		{
+			uut->resume();
+		}));
+	uut->fastForward(500ms); // polls indirectly in the end of time increment
+
+	EXPECT_CALL(timerCallback1, Call()).Times(0);
+	m_currentTime += 500ms;
+	uut->poll();
+	uut->poll();
+}
+
+TEST_F(TimerTest, NoFastForwardDuringPollTest)
+{
+	StrictMock<MockFunction<void(void)>> timerCallback1;
+
+	auto uut = createUUT();
+
+	auto timer1 = uut->createTickTimer();
+	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+	timer1->start(500ms);
+	EXPECT_CALL(timerCallback1, Call()).WillOnce(
+		Invoke([&]()
+		{
+			uut->fastForward(500ms); // this should trigger timer a second callback when we allow fast forward during callback
+		}));
+	m_currentTime += 500ms;
+	uut->poll();
+	uut->poll();
+}
+
+TEST_F(TimerTest, PollDuringDuringPollDoesNotDirsturbBehaviorTest)
+{
+	StrictMock<MockFunction<void(void)>> timerCallback1;
+
+	auto uut = createUUT();
+
+	auto timer1 = uut->createTickTimer();
+	timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+	timer1->start(500ms);
+	EXPECT_CALL(timerCallback1, Call()).Times(4).WillRepeatedly(
+		Invoke([&]()
+		{
+			uut->poll();
+		}));
+	m_currentTime += 2000ms;
 	uut->poll();
 }

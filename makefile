@@ -10,11 +10,16 @@ steady_timer: $(HEADERS) $(SOURCES) main.cpp makefile
 	LC_ALL=C g++ --std=c++14 $(SOURCES) main.cpp -o steady_timer
 	
 test: $(HEADERS) $(SOURCES) TimerTest.cpp makefile
-	LC_ALL=C g++ -O0 -g3 --std=c++14 $(SOURCES) $(LIB_GMOCK) TimerTest.cpp -o test -lpthread
-
+	LC_ALL=C g++ -O0 -g3 --std=c++14 $(SOURCES) $(LIB_GMOCK) TimerTest.cpp -o test -lpthread -fprofile-arcs -ftest-coverage
+	
 run: steady_timer
 	./steady_timer
 	
 run_test: test
 	GTEST_COLOR=TRUE ./test
+
+coverage: test
+	GTEST_COLOR=TRUE ./test
+	gcovr
+	rm -f *.gcno *.gcda
 	

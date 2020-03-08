@@ -107,7 +107,8 @@ void TimerManager::poll()
 	}
 	const auto currentTime = m_steadyTickCallback();
 	// this flag allows time duration correct timer behavior when timers are created during poll in callback
-	// we modify the current time to the time of currently expired timer
+	// we modify the current time to the time of currently expired timer. This means when a callback creates does operations on timers we
+	// we have the current timers expire time as reference.
 	m_isCurrentlyPolling = true;
 
 	auto getNextExpiredTimer = [&]()
