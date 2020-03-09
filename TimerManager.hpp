@@ -1,9 +1,9 @@
 #pragma once
 
+#include "ITimerManager.hpp"
 #include <chrono>
 #include <functional>
 #include <list>
-#include "ITimerManager.hpp"
 
 class Timer;
 
@@ -12,29 +12,35 @@ extern std::chrono::milliseconds getChronoSteadyClockTicks(void);
 class TimerManager : public ITimerManager
 {
 public:
-	using SteadyTickCallbackType = std::function<std::chrono::milliseconds(void)>;
+    using SteadyTickCallbackType = std::function<std::chrono::milliseconds(void)>;
 
-	TimerManager(SteadyTickCallbackType steadyTickProvider = getChronoSteadyClockTicks);
+    TimerManager(SteadyTickCallbackType steadyTickProvider = getChronoSteadyClockTicks);
 
-	std::shared_ptr<ITimer> createSingleShotTimer() override;
+    ~TimerManager();
 
-	std::shared_ptr<ITimer> createTickTimer() override;
+    std::shared_ptr<ITimer> createSingleShotTimer() override;
 
-	void fastForward(std::chrono::milliseconds milliseconds) override;
+    std::shared_ptr<ITimer> createTickTimer() override;
 
-	void poll() override;
+    void fastForward(std::chrono::milliseconds milliseconds) override;
 
-	void pause() override;
+    void poll() override;
 
-	void resume() override;
+    void pause() override;
+
+    void resume() override;
 
 private:
-	SteadyTickCallbackType m_steadyTickCallback;
-	std::list<std::weak_ptr<Timer>> m_timers;
-	std::chrono::milliseconds m_pollTimeStamp = 0ms;
-	std::chrono::milliseconds m_fastForwardOffset = 0ms;
-	std::chrono::milliseconds m_pausingTime = 0ms;
-	std::chrono::milliseconds m_pausingOffset = 0ms;
-	bool m_paused = false;
-	bool m_isCurrentlyPolling = false;
+    TimerManager(const TimerManager&) = delete;
+    TimerManager(TimerManager&&) = delete;
+
+    SteadyTickCallbackType m_steadyTickCallback;
+    SteadyTickCallbackType m_originalSteadyTickCallback; // needed to restore
+    std::list<std::weak_ptr<Timer>> m_timers;
+    std::chrono::milliseconds m_pollTimeStamp = 0ms;
+    std::chrono::milliseconds m_fastForwardOffset = 0ms;
+    std::chrono::milliseconds m_pausingTime = 0ms;
+    std::chrono::milliseconds m_pausingOffset = 0ms;
+    bool m_paused = false;
+    bool m_isCurrentlyPolling = false;
 };

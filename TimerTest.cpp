@@ -162,6 +162,39 @@ TEST_F(TimerTest, PauseAndFastForwardTest)
     EXPECT_EQ(0ms, timer1->getRemainingMilliseconds());
 }
 
+TEST_F(TimerTest, CheckTimeCorrectnessDuringManipulationsTest)
+{
+    StrictMock<MockFunction<void(void)>> timerCallback1;
+
+    auto uut = createUUT();
+
+    auto timer1 = uut->createTickTimer();
+    timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+    timer1->start(500ms);
+
+    EXPECT_EQ(500ms, timer1->getRemainingMilliseconds());
+    m_currentTime += 100ms;
+    EXPECT_EQ(400ms, timer1->getRemainingMilliseconds());
+    uut->fastForward(2ms);
+    uut->pause();
+    EXPECT_EQ(398ms, timer1->getRemainingMilliseconds());
+
+    uut->fastForward(2ms);
+    EXPECT_EQ(396ms, timer1->getRemainingMilliseconds());
+    m_currentTime += 1ms;
+    EXPECT_EQ(396ms, timer1->getRemainingMilliseconds());
+
+    uut->resume();
+
+    m_currentTime += 395ms;
+    uut->poll();
+    EXPECT_EQ(1ms, timer1->getRemainingMilliseconds());
+
+    EXPECT_CALL(timerCallback1, Call());
+    uut->fastForward(1ms);
+}
+
 TEST_F(TimerTest, CycleTimerTest)
 {
     StrictMock<MockFunction<void(void)>> timerCallback1;
@@ -347,6 +380,30 @@ TEST_F(TimerTest, PollDuringDuringPollDoesNotDirsturbBehaviorTest)
     }));
     m_currentTime += 2000ms;
     uut->poll();
+}
+
+TEST_F(TimerTest, DeleteManagerKeepsDoesNotAccessFreedMemoryTest)
+{
+    StrictMock<MockFunction<void(void)>> timerCallback1;
+
+    auto uut = createUUT();
+
+    auto timer1 = uut->createTickTimer();
+    timer1->setTimeoutCallback(timerCallback1.AsStdFunction());
+
+    timer1->start(500ms);
+
+    EXPECT_EQ(500ms, timer1->getRemainingMilliseconds());
+    m_currentTime += 100ms;
+    EXPECT_EQ(400ms, timer1->getRemainingMilliseconds());
+    uut->fastForward(2ms);
+    uut->pause();
+    EXPECT_EQ(398ms, timer1->getRemainingMilliseconds());
+
+    uut = nullptr;
+    EXPECT_EQ(398ms, timer1->getRemainingMilliseconds());
+    m_currentTime += 98ms;
+    EXPECT_EQ(300ms, timer1->getRemainingMilliseconds());
 }
 
 TEST_F(TimerTest, OstreamTest)
